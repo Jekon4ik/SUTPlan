@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+icalendar
+cachetools
+pytz
+python-dotenv
