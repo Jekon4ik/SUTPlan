@@ -26,7 +26,10 @@ CACHE_MAXSIZE = int(os.getenv("CACHE_MAXSIZE", 128))
 # Linux httpx never has to negotiate TLS directly with plan.polsl.pl.
 # Locally it falls back to the university server directly (Windows curl
 # workaround is no longer needed — httpx is used everywhere).
-PLAN_URL  = os.getenv("PLAN_URL", "https://plan.polsl.pl/plan.php").strip()
+PLAN_URL  = os.getenv("PLAN_URL", "https://sutplan-proxy.yaold623.workers.dev").strip()
+# Ensure the protocol is present — Railway UI sometimes strips 'https://' on paste
+if not PLAN_URL.startswith("http"):
+    PLAN_URL = "https://" + PLAN_URL
 WARSAW_TZ = pytz.timezone("Europe/Warsaw")
 
 logging.basicConfig(level=logging.INFO)
