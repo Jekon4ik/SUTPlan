@@ -17,7 +17,7 @@ from pydantic import BaseModel
 # Config
 # ---------------------------------------------------------------------------
 
-load_dotenv()
+load_dotenv(override=False)  # Railway env vars take priority over any .env file
 
 CACHE_TTL     = int(os.getenv("CACHE_TTL", 7200))
 CACHE_MAXSIZE = int(os.getenv("CACHE_MAXSIZE", 128))
@@ -26,11 +26,12 @@ CACHE_MAXSIZE = int(os.getenv("CACHE_MAXSIZE", 128))
 # Linux httpx never has to negotiate TLS directly with plan.polsl.pl.
 # Locally it falls back to the university server directly (Windows curl
 # workaround is no longer needed — httpx is used everywhere).
-PLAN_URL  = os.getenv("PLAN_URL", "https://plan.polsl.pl/plan.php")
+PLAN_URL  = os.getenv("PLAN_URL", "https://plan.polsl.pl/plan.php").strip()
 WARSAW_TZ = pytz.timezone("Europe/Warsaw")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.info("PLAN_URL = %r", PLAN_URL)  # shows exact value (incl. hidden chars) on startup
 
 # ---------------------------------------------------------------------------
 # App
@@ -148,6 +149,7 @@ async def fetch_ics(group_id: str, week: int) -> str:
     university server directly — works fine on Windows.
     """
     url = f"{PLAN_URL}?type=0&id={group_id}&cvsfile=true&w={week}"
+    logger.info("Fetching: %r", url)
     try:
         async with httpx.AsyncClient(timeout=20, verify=False) as client:
             response = await client.get(url)
