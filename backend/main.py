@@ -54,6 +54,7 @@ ALLOWED_ORIGINS = os.getenv(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://sut-plan.*\.vercel\.app",
     allow_methods=["GET"],
     allow_headers=["*"],
 )
