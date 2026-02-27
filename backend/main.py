@@ -1,12 +1,10 @@
-import asyncio
 import os
 import re
 import logging
-import subprocess
-import warnings
 from datetime import datetime
 from typing import Optional
 
+import httpx
 import pytz
 from cachetools import TTLCache
 from dotenv import load_dotenv
@@ -15,25 +13,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from icalendar import Calendar
 from pydantic import BaseModel
 
-warnings.filterwarnings("ignore", message=".*Unverified HTTPS.*")
-
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 
 load_dotenv()
 
-CACHE_TTL = int(os.getenv("CACHE_TTL", 7200))
+CACHE_TTL     = int(os.getenv("CACHE_TTL", 7200))
 CACHE_MAXSIZE = int(os.getenv("CACHE_MAXSIZE", 128))
 
-PLAN_URL = "https://plan.polsl.pl/plan.php"
+# On production this points to the Cloudflare Worker proxy URL so that
+# Linux httpx never has to negotiate TLS directly with plan.polsl.pl.
+# Locally it falls back to the university server directly (Windows curl
+# workaround is no longer needed — httpx is used everywhere).
+PLAN_URL  = os.getenv("PLAN_URL", "https://plan.polsl.pl/plan.php")
 WARSAW_TZ = pytz.timezone("Europe/Warsaw")
-
-# Use the Windows system curl (schannel TLS) — plan.polsl.pl rejects OpenSSL connections.
-# Falls back to whatever curl is on PATH (works on Linux/Mac too with -k).
-CURL_EXE = os.getenv("CURL_EXE", "C:/Windows/System32/curl.exe")
-if not os.path.isfile(CURL_EXE):
-    CURL_EXE = "curl"   # fallback to PATH on non-Windows
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -144,40 +138,22 @@ def dt_to_iso(dt: datetime) -> str:
 # ICS fetching & parsing
 # ---------------------------------------------------------------------------
 
-def _fetch_ics_sync(group_id: str, week: int) -> str:
-    """
-    Fetch ICS via Windows system curl (schannel TLS).
-
-    plan.polsl.pl resets connections from Python's OpenSSL stack regardless of
-    verify=False or OP_LEGACY_SERVER_CONNECT — the server only accepts the
-    Windows-native schannel TLS fingerprint. Calling the system curl.exe
-    (C:/Windows/System32/curl.exe) is the reliable workaround.
-    """
-    url = (
-        f"{PLAN_URL}"
-        f"?type=0&id={group_id}&cvsfile=true&w={week}"
-    )
-    result = subprocess.run(
-        [CURL_EXE, "-s", "-k", "--max-time", "15", url],
-        capture_output=True,
-        timeout=20,
-    )
-
-    if result.returncode not in (0, 56):
-        # returncode 56 = "recv() failure" — server closes without close_notify
-        # (common with old IIS) but the body is still fully received.
-        # Any other non-zero code is a real error.
-        stderr = result.stderr.decode("utf-8", errors="replace").strip()
-        raise RuntimeError(f"curl zakończył się kodem {result.returncode}: {stderr}")
-
-    return result.stdout.decode("utf-8", errors="replace")
-
-
 async def fetch_ics(group_id: str, week: int) -> str:
-    """Async wrapper around _fetch_ics_sync."""
+    """
+    Fetch the ICS file for a given group and week.
+
+    In production PLAN_URL points to a Cloudflare Worker proxy so that
+    httpx never negotiates TLS directly with plan.polsl.pl (which rejects
+    non-Windows TLS fingerprints).  Locally the default URL hits the
+    university server directly — works fine on Windows.
+    """
+    url = f"{PLAN_URL}?type=0&id={group_id}&cvsfile=true&w={week}"
     try:
-        content = await asyncio.to_thread(_fetch_ics_sync, group_id, week)
-    except subprocess.TimeoutExpired:
+        async with httpx.AsyncClient(timeout=20, verify=False) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            content = response.text
+    except httpx.TimeoutException:
         raise HTTPException(
             status_code=502,
             detail="Nie można połączyć się z serwerem uczelni (przekroczono czas oczekiwania).",
