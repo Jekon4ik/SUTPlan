@@ -48,7 +48,7 @@ app = FastAPI(
 
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "https://sutplan.vercel.app",
+    "https://sut-plan.vercel.app",
 ).strip().split(",")
 
 app.add_middleware(
