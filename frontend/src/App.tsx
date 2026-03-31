@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSchedule } from './hooks/useSchedule'
+import { useScheduleLocal } from './hooks/useScheduleLocal'
 import { WeekNavigator } from './components/WeekNavigator'
 import { DaySection } from './components/DaySection'
 import { SkeletonWeek, EmptyWeek, ErrorState } from './components/StatusViews'
@@ -31,7 +31,7 @@ function groupByDay(events: ScheduleEvent[]): [string, ScheduleEvent[]][] {
 
 export default function App() {
   const [week, setWeek] = useState<number>(getInitialWeek)
-  const { data, isLoading, isError, error, refetch } = useSchedule(week)
+  const { data, isLoading, isError, error, refetch } = useScheduleLocal(week)
 
   function changeWeek(next: number) {
     const clamped = Math.max(MIN_WEEK, Math.min(MAX_WEEK, next))
