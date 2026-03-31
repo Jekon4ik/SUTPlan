@@ -17,18 +17,18 @@ export function parseIcs(icsContent: string): ScheduleEvent[] {
   const events: ScheduleEvent[] = [];
 
   try {
-    // Parse ICS content into jCal format, then to ICAL.js components
+    // Parse ICS content into jCal format
     const jcal = ICAL.parse(icsContent);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const calendar = new (ICAL as any).Calendar(jcal);
+    
+    // Create a Component from jCal format
+    const component = new ICAL.Component(jcal);
 
-    // Walk through all VEVENT components in calendar
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const component of (calendar as any).getAllSubcomponents("vevent")) {
-      const uid = component.getFirstPropertyValue("uid") || "";
-      const summaryRaw = component.getFirstPropertyValue("summary") || "";
-      const dtstart = component.getFirstPropertyValue("dtstart");
-      const dtend = component.getFirstPropertyValue("dtend");
+    // Walk through all VEVENT components
+    for (const vevent of component.getAllSubcomponents("vevent")) {
+      const uid = String(vevent.getFirstPropertyValue("uid") || "");
+      const summaryRaw = String(vevent.getFirstPropertyValue("summary") || "");
+      const dtstart = vevent.getFirstPropertyValue("dtstart");
+      const dtend = vevent.getFirstPropertyValue("dtend");
 
       // Skip events without proper start/end times
       if (!dtstart || !dtend) {
@@ -37,8 +37,12 @@ export function parseIcs(icsContent: string): ScheduleEvent[] {
       }
 
       // Convert ICAL.Time to JavaScript Date and then to ISO string with Warsaw timezone
-      const startIso = dateToIso(dtstart.toJSDate());
-      const endIso = dateToIso(dtend.toJSDate());
+      // Type assertion needed because ical.js has loose typing
+      const dtstartTime = dtstart as ICAL.Time;
+      const dtendTime = dtend as ICAL.Time;
+      
+      const startIso = dateToIso(dtstartTime.toJSDate());
+      const endIso = dateToIso(dtendTime.toJSDate());
 
       // Parse SUMMARY field to extract subject, type, teacher, room
       const { subject, type, teacher, room } = parseSummary(summaryRaw);
