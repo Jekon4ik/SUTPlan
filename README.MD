@@ -11,10 +11,4 @@ Pliki i foldery istotne dla deweloperów:
   uvicorn main:app --reload --port 6565
   ```
 
-- `frontend/` — (planowany) Vite + React projekt.
-
-Notatki bezpieczeństwa:
-- Nie commituj `backend/.env` ani `/.venv/` — są wymienione w `.gitignore`.
-- Umieść prywatne wartości (np. `CURL_EXE` jeśli zmieniasz) w lokalnym `.env` i nie publikuj.
-
-Jeśli chcesz, mogę zainicjować frontend scaffold (Vite + Tailwind) teraz.
+- `frontend/` —  Vite + React projekt.
