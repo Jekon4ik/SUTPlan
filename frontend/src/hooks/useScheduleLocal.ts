@@ -8,6 +8,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchIcs } from "../utils/icsClient";
 import { parseIcs } from "../utils/parseIcs";
+import { toUniWeek } from "../lib/weeks";
 import type { ScheduleEvent } from "../types";
 
 const GROUP_ID = "343167655";
@@ -17,7 +18,9 @@ export function useScheduleLocal(week: number) {
     queryKey: ["schedule", GROUP_ID, week],
     queryFn: async () => {
       // Step 1: Fetch raw ICS from Cloudflare Worker proxy
-      const icsContent = await fetchIcs(GROUP_ID, week);
+      // toUniWeek maps sequential app weeks to the university's actual ?w= numbers
+      // (uni numbering skips 15 between spring and summer semester)
+      const icsContent = await fetchIcs(GROUP_ID, toUniWeek(week));
 
       // Step 2: Parse ICS to structured events with timezone conversion
       const events = parseIcs(icsContent);

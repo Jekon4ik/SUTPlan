@@ -1,7 +1,0 @@
-fastapi
-uvicorn[standard]
-httpx
-icalendar
-cachetools
-pytz
-python-dotenv

@@ -15,6 +15,22 @@ const ANCHOR_WEEK = 19
 // Monday 02 Mar 2026 — confirmed from live server data
 const ANCHOR_MONDAY = new Date('2026-03-02T00:00:00')
 
+// The university week numbering has two gaps (exam/break periods with no classes).
+// App weeks are sequential (for navigation/display); toUniWeek maps to the actual ?w= value.
+//   Gap 1: spring → summer  — uni jumps from 31 to 47 (skips 15)
+//   Gap 2: mid-summer break — uni jumps from 50 to 56 (skips 5 more)
+const UNI_GAP1_AFTER  = 31  // app week 31 = uni week 31 (last of spring)
+const UNI_GAP1_OFFSET = 15
+const UNI_GAP2_AFTER  = 35  // app week 35 = uni week 50 (last before mid-summer break)
+const UNI_GAP2_EXTRA  = 5
+
+/** Converts the app's sequential week number to the actual university ?w= parameter. */
+export function toUniWeek(appWeek: number): number {
+  if (appWeek > UNI_GAP2_AFTER) return appWeek + UNI_GAP1_OFFSET + UNI_GAP2_EXTRA
+  if (appWeek > UNI_GAP1_AFTER) return appWeek + UNI_GAP1_OFFSET
+  return appWeek
+}
+
 // First week of the semester — never default to an earlier week
 const FIRST_SEMESTER_WEEK = 19
 
