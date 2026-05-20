@@ -58,11 +58,10 @@ export async function fetchIcs(
 
     const content = await response.text();
 
-    // Validate that we received actual ICS data
+    // If server returns non-ICS content (e.g. PHP error for weeks past semester end),
+    // return an empty calendar so the UI shows "no classes" instead of an error.
     if (!content.trim().startsWith("BEGIN:VCALENDAR")) {
-      throw new Error(
-        "Invalid calendar data received — server did not return valid ICS file"
-      );
+      return "BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR";
     }
 
     return content;
